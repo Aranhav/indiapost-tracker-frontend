@@ -29,13 +29,20 @@ export interface BulkTrackingResult {
   error?: string
 }
 
+// External API response from Python backend (uses snake_case)
 export interface ExternalAPIResponse {
   success: boolean
   data?: {
-    trackingNumber: string
+    tracking_number?: string
+    trackingNumber?: string
     status: string
     origin?: string
     destination?: string
+    // Snake case from Python API
+    booked_on?: string
+    delivered_on?: string
+    article_type?: string
+    // Camel case alternative
     bookedOn?: string
     deliveredOn?: string
     articleType?: string
