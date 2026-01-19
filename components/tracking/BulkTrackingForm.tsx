@@ -40,10 +40,10 @@ export function BulkTrackingForm() {
       return
     }
 
-    if (trackingNumbers.length > 50) {
+    if (trackingNumbers.length > 10) {
       toast({
         title: "Error",
-        description: "Maximum 50 tracking numbers allowed at once",
+        description: "Maximum 10 tracking numbers allowed at once",
         variant: "destructive",
       })
       return
@@ -100,7 +100,7 @@ export function BulkTrackingForm() {
         <CardHeader>
           <CardTitle className="text-lg">Bulk Track Shipments</CardTitle>
           <CardDescription>
-            Enter multiple tracking numbers separated by newlines, commas, or spaces (max 50)
+            Enter multiple tracking numbers separated by newlines, commas, or spaces (max 10)
           </CardDescription>
         </CardHeader>
         <CardContent>

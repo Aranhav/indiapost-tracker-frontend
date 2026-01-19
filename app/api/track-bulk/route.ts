@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { fetchBulkTrackingFromAPI } from '@/lib/tracking-api'
 
-const MAX_TRACKING_NUMBERS = 50
+const MAX_TRACKING_NUMBERS = 10
 
 export async function POST(request: NextRequest) {
   try {
