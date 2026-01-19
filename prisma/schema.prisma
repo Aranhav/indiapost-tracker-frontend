@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TrackingRecord {
+  id             String          @id @default(cuid())
+  trackingNumber String          @unique
+  status         String?
+  origin         String?
+  destination    String?
+  bookedOn       String?
+  deliveredOn    String?
+  articleType    String?
+  rawResponse    Json?
+  events         TrackingEvent[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([trackingNumber])
+  @@index([status])
+}
+
+model TrackingEvent {
+  id               String         @id @default(cuid())
+  trackingRecordId String
+  trackingRecord   TrackingRecord @relation(fields: [trackingRecordId], references: [id], onDelete: Cascade)
+  date             String
+  time             String?
+  office           String?
+  event            String
+  location         String?
+  createdAt        DateTime       @default(now())
+
+  @@index([trackingRecordId])
+}
+
+model BulkSession {
+  id              String   @id @default(cuid())
+  trackingNumbers String[]
+  total           Int
+  successful      Int
+  failed          Int
+  createdAt       DateTime @default(now())
+}
