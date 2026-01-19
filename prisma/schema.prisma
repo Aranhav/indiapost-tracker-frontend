@@ -37,6 +37,8 @@ model TrackingEvent {
   createdAt        DateTime       @default(now())
 
   @@index([trackingRecordId])
+  // Unique constraint to prevent duplicate events for the same tracking record
+  @@unique([trackingRecordId, date, time, event, office], name: "unique_tracking_event")
 }
 
 model BulkSession {

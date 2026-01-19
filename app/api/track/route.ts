@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { fetchTrackingFromAPI } from '@/lib/tracking-api'
-
-const CACHE_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+import { filterFlightEvents, getFlightSummary } from '@/lib/flight-utils'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const trackingNumber = searchParams.get('id')?.trim().toUpperCase()
+    const flightOnly = searchParams.get('flightOnly') === 'true'
 
     if (!trackingNumber) {
       return NextResponse.json(
@@ -16,38 +16,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if we have a recent record in the database
-    const existingRecord = await prisma.trackingRecord.findUnique({
-      where: { trackingNumber },
-      include: { events: { orderBy: { createdAt: 'desc' } } },
-    })
-
-    const now = new Date()
-    const isRecent = existingRecord &&
-      (now.getTime() - existingRecord.updatedAt.getTime()) < CACHE_DURATION_MS
-
-    if (isRecent && existingRecord) {
-      return NextResponse.json({
-        trackingNumber: existingRecord.trackingNumber,
-        status: existingRecord.status,
-        origin: existingRecord.origin,
-        destination: existingRecord.destination,
-        bookedOn: existingRecord.bookedOn,
-        deliveredOn: existingRecord.deliveredOn,
-        articleType: existingRecord.articleType,
-        events: existingRecord.events.map((e: any) => ({
-          id: e.id,
-          date: e.date,
-          time: e.time,
-          office: e.office,
-          event: e.event,
-          location: e.location,
-        })),
-        cached: true,
-      })
-    }
-
-    // Fetch from external API
+    // Always fetch fresh data from scraping API
     const apiResponse = await fetchTrackingFromAPI(trackingNumber)
 
     if (!apiResponse.success || !apiResponse.data) {
@@ -59,49 +28,83 @@ export async function GET(request: NextRequest) {
 
     const data = apiResponse.data
 
-    // Upsert the record in the database
-    const savedRecord = await prisma.trackingRecord.upsert({
-      where: { trackingNumber },
-      create: {
-        trackingNumber,
-        status: data.status,
-        origin: data.origin,
-        destination: data.destination,
-        bookedOn: data.bookedOn,
-        deliveredOn: data.deliveredOn,
-        articleType: data.articleType,
-        rawResponse: data,
-        events: {
-          create: (data.events || []).map((event: any) => ({
-            date: event.date,
-            time: event.time,
-            office: event.office,
-            event: event.event,
-            location: event.location,
-          })),
+    // Deduplicate events based on date + time + event + office
+    const uniqueEvents = deduplicateEvents(data.events || [])
+
+    // Save to database using transaction to prevent race conditions
+    const savedRecord = await prisma.$transaction(async (tx) => {
+      // Delete existing events for this tracking number
+      const existingRecord = await tx.trackingRecord.findUnique({
+        where: { trackingNumber },
+      })
+
+      if (existingRecord) {
+        await tx.trackingEvent.deleteMany({
+          where: { trackingRecordId: existingRecord.id },
+        })
+      }
+
+      // Upsert the record with new events
+      return tx.trackingRecord.upsert({
+        where: { trackingNumber },
+        create: {
+          trackingNumber,
+          status: data.status,
+          origin: data.origin,
+          destination: data.destination,
+          bookedOn: data.booked_on || data.bookedOn,
+          deliveredOn: data.delivered_on || data.deliveredOn,
+          articleType: data.article_type || data.articleType,
+          rawResponse: data,
+          events: {
+            create: uniqueEvents.map((event: any) => ({
+              date: event.date || '',
+              time: event.time || null,
+              office: event.office || null,
+              event: event.event || '',
+              location: event.location || null,
+            })),
+          },
         },
-      },
-      update: {
-        status: data.status,
-        origin: data.origin,
-        destination: data.destination,
-        bookedOn: data.bookedOn,
-        deliveredOn: data.deliveredOn,
-        articleType: data.articleType,
-        rawResponse: data,
-        events: {
-          deleteMany: {},
-          create: (data.events || []).map((event: any) => ({
-            date: event.date,
-            time: event.time,
-            office: event.office,
-            event: event.event,
-            location: event.location,
-          })),
+        update: {
+          status: data.status,
+          origin: data.origin,
+          destination: data.destination,
+          bookedOn: data.booked_on || data.bookedOn,
+          deliveredOn: data.delivered_on || data.deliveredOn,
+          articleType: data.article_type || data.articleType,
+          rawResponse: data,
+          events: {
+            create: uniqueEvents.map((event: any) => ({
+              date: event.date || '',
+              time: event.time || null,
+              office: event.office || null,
+              event: event.event || '',
+              location: event.location || null,
+            })),
+          },
         },
-      },
-      include: { events: { orderBy: { createdAt: 'desc' } } },
+        include: { events: { orderBy: { date: 'desc' } } },
+      })
     })
+
+    // Map events to response format
+    let responseEvents = savedRecord.events.map((e: any) => ({
+      id: e.id,
+      date: e.date,
+      time: e.time,
+      office: e.office,
+      event: e.event,
+      location: e.location,
+    }))
+
+    // Filter to flight events only if requested
+    if (flightOnly) {
+      responseEvents = filterFlightEvents(responseEvents)
+    }
+
+    // Get flight summary
+    const flightSummary = getFlightSummary(savedRecord.events)
 
     return NextResponse.json({
       trackingNumber: savedRecord.trackingNumber,
@@ -111,15 +114,14 @@ export async function GET(request: NextRequest) {
       bookedOn: savedRecord.bookedOn,
       deliveredOn: savedRecord.deliveredOn,
       articleType: savedRecord.articleType,
-      events: savedRecord.events.map((e: any) => ({
-        id: e.id,
-        date: e.date,
-        time: e.time,
-        office: e.office,
-        event: e.event,
-        location: e.location,
-      })),
+      events: responseEvents,
+      flightSummary: {
+        hasFlightEvents: flightSummary.hasFlightEvents,
+        flightEventCount: flightSummary.flightCount,
+        flights: flightSummary.flights,
+      },
       cached: false,
+      flightOnly,
     })
   } catch (error) {
     console.error('Tracking API error:', error)
@@ -128,4 +130,22 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Helper function to deduplicate events based on composite key
+function deduplicateEvents(events: any[]): any[] {
+  const seen = new Set<string>()
+  const unique: any[] = []
+
+  for (const event of events) {
+    // Create a composite key from date, time, event, and office
+    const key = `${event.date || ''}-${event.time || ''}-${event.event || ''}-${event.office || ''}`
+
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(event)
+    }
+  }
+
+  return unique
 }
