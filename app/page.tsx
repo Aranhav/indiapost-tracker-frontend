@@ -9,16 +9,16 @@ export default function Home() {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl px-8 py-12 text-center">
-        <div className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-1.5 mb-6">
-          <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-          <span className="text-orange-400 text-sm font-medium">Real-time Tracking</span>
+      <div className="text-center pt-4 pb-2">
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <div className="w-1.5 h-1.5 bg-orange-500 rounded-full" />
+          <span className="text-slate-400 text-sm tracking-wide uppercase">India Post</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">
-          Track Your Shipments
-        </h2>
-        <p className="text-slate-400 max-w-lg mx-auto text-base leading-relaxed">
-          Get instant updates on your India Post packages with delivery status, location tracking, and estimated delivery times.
+        <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 tracking-tight">
+          Track Your Shipment
+        </h1>
+        <p className="text-slate-500 mt-2 text-base">
+          Enter your tracking number to get instant updates
         </p>
       </div>
 
