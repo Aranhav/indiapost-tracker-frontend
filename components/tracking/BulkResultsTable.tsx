@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import {
   Table,
   TableBody,
@@ -14,7 +14,15 @@ import { Button } from "@/components/ui/button"
 import { StatusBadge } from "./StatusBadge"
 import { TrackingTimeline } from "./TrackingTimeline"
 import { TrackingRecord } from "@/lib/types"
-import { ChevronDown, ChevronUp, Download } from "lucide-react"
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ChevronsUpDown,
+  ChevronsDownUp,
+  ArrowUp,
+  ArrowDown
+} from "lucide-react"
 import { exportToCSV, exportToExcel } from "@/lib/export-utils"
 
 interface BulkResultsTableProps {
@@ -24,6 +32,7 @@ interface BulkResultsTableProps {
 export function BulkResultsTable({ results }: BulkResultsTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
+  const tableRef = useRef<HTMLDivElement>(null)
 
   const toggleRow = (trackingNumber: string) => {
     const newExpanded = new Set(expandedRows)
@@ -53,6 +62,22 @@ export function BulkResultsTable({ results }: BulkResultsTableProps) {
     }
   }
 
+  const expandAll = () => {
+    setExpandedRows(new Set(results.map((r) => r.trackingNumber)))
+  }
+
+  const collapseAll = () => {
+    setExpandedRows(new Set())
+  }
+
+  const scrollToTop = () => {
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const scrollToBottom = () => {
+    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
+
   const handleExport = (format: 'csv' | 'xlsx') => {
     const dataToExport =
       selectedRows.size > 0
@@ -70,115 +95,161 @@ export function BulkResultsTable({ results }: BulkResultsTableProps) {
     return null
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            Results ({results.length} shipments)
-          </CardTitle>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('csv')}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              CSV
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExport('xlsx')}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Excel
-            </Button>
-          </div>
-        </div>
-        {selectedRows.size > 0 && (
-          <p className="text-sm text-gray-500">
-            {selectedRows.size} selected - export will include selected items only
-          </p>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.size === results.length}
-                  onChange={toggleAllSelection}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-              </TableHead>
-              <TableHead>Tracking #</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Origin</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead>Last Event</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {results.map((result) => {
-              const isExpanded = expandedRows.has(result.trackingNumber)
-              const isSelected = selectedRows.has(result.trackingNumber)
-              const lastEvent = result.events?.[0]
+  const allExpanded = expandedRows.size === results.length
+  const someExpanded = expandedRows.size > 0
 
-              return (
-                <>
-                  <TableRow
-                    key={result.trackingNumber}
-                    className="cursor-pointer"
-                    onClick={() => toggleRow(result.trackingNumber)}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelection(result.trackingNumber)}
-                        className="w-4 h-4 rounded border-gray-300"
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono font-medium">
-                      {result.trackingNumber}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={result.status || 'unknown'} />
-                    </TableCell>
-                    <TableCell>{result.origin || '-'}</TableCell>
-                    <TableCell>{result.destination || '-'}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">
-                      {lastEvent?.event || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon">
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {isExpanded && (
-                    <TableRow key={`${result.trackingNumber}-expanded`}>
-                      <TableCell colSpan={7} className="bg-gray-50">
-                        <div className="p-4">
-                          <TrackingTimeline events={result.events || []} />
-                        </div>
+  return (
+    <div ref={tableRef}>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-lg">
+              Results ({results.length} shipments)
+            </CardTitle>
+            <div className="flex gap-2 flex-wrap">
+              {/* Expand/Collapse buttons */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={allExpanded ? collapseAll : expandAll}
+              >
+                {allExpanded ? (
+                  <>
+                    <ChevronsDownUp className="w-4 h-4 mr-2" />
+                    Collapse All
+                  </>
+                ) : (
+                  <>
+                    <ChevronsUpDown className="w-4 h-4 mr-2" />
+                    Expand All
+                  </>
+                )}
+              </Button>
+
+              {/* Scroll buttons */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToTop}
+              >
+                <ArrowUp className="w-4 h-4 mr-2" />
+                Top
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={scrollToBottom}
+              >
+                <ArrowDown className="w-4 h-4 mr-2" />
+                Bottom
+              </Button>
+
+              {/* Export buttons */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport('csv')}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleExport('xlsx')}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Excel
+              </Button>
+            </div>
+          </div>
+          <div className="flex gap-4 text-sm text-gray-500">
+            {selectedRows.size > 0 && (
+              <span>{selectedRows.size} selected - export will include selected items only</span>
+            )}
+            {someExpanded && (
+              <span>{expandedRows.size} of {results.length} expanded</span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.size === results.length}
+                    onChange={toggleAllSelection}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                </TableHead>
+                <TableHead>Tracking #</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Origin</TableHead>
+                <TableHead>Destination</TableHead>
+                <TableHead>Last Event</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {results.map((result) => {
+                const isExpanded = expandedRows.has(result.trackingNumber)
+                const isSelected = selectedRows.has(result.trackingNumber)
+                const lastEvent = result.events?.[0]
+
+                return (
+                  <>
+                    <TableRow
+                      key={result.trackingNumber}
+                      className="cursor-pointer"
+                      onClick={() => toggleRow(result.trackingNumber)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelection(result.trackingNumber)}
+                          className="w-4 h-4 rounded border-gray-300"
+                        />
+                      </TableCell>
+                      <TableCell className="font-mono font-medium">
+                        {result.trackingNumber}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={result.status || 'unknown'} />
+                      </TableCell>
+                      <TableCell>{result.origin || '-'}</TableCell>
+                      <TableCell>{result.destination || '-'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {lastEvent?.event || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon">
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
-                  )}
-                </>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                    {isExpanded && (
+                      <TableRow key={`${result.trackingNumber}-expanded`}>
+                        <TableCell colSpan={7} className="bg-gray-50">
+                          <div className="p-4">
+                            <TrackingTimeline events={result.events || []} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
