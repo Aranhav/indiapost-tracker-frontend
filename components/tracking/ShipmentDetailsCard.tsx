@@ -11,17 +11,21 @@ interface ShipmentDetailsCardProps {
 
 export function ShipmentDetailsCard({ tracking }: ShipmentDetailsCardProps) {
   return (
-    <Card>
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Shipment Details</CardTitle>
+    <Card className="border border-gray-100 shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base font-semibold text-gray-900">
+            Shipment Details
+          </CardTitle>
           <StatusBadge status={tracking.status || 'unknown'} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {/* Tracking Number */}
-        <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-sm text-gray-500 mb-1">Tracking Number</p>
+        <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-100">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+            Tracking Number
+          </p>
           <p className="font-mono text-lg font-semibold text-gray-900">
             {tracking.trackingNumber}
           </p>
@@ -29,17 +33,23 @@ export function ShipmentDetailsCard({ tracking }: ShipmentDetailsCardProps) {
 
         {/* Origin to Destination */}
         {(tracking.origin || tracking.destination) && (
-          <div className="flex items-center gap-3 py-2">
-            <div className="flex-1">
-              <p className="text-sm text-gray-500 mb-1">Origin</p>
-              <p className="font-medium text-gray-900">
+          <div className="flex items-stretch gap-3">
+            <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3 border border-gray-100">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                Origin
+              </p>
+              <p className="text-sm font-medium text-gray-900">
                 {tracking.origin || '-'}
               </p>
             </div>
-            <ArrowRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
-            <div className="flex-1 text-right">
-              <p className="text-sm text-gray-500 mb-1">Destination</p>
-              <p className="font-medium text-gray-900">
+            <div className="flex items-center">
+              <ArrowRight className="w-4 h-4 text-orange-400" />
+            </div>
+            <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3 border border-gray-100">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">
+                Destination
+              </p>
+              <p className="text-sm font-medium text-gray-900">
                 {tracking.destination || '-'}
               </p>
             </div>
@@ -48,36 +58,56 @@ export function ShipmentDetailsCard({ tracking }: ShipmentDetailsCardProps) {
 
         {/* Article Type */}
         {tracking.articleType && (
-          <div className="flex items-center gap-3 py-2 border-t border-gray-100">
-            <Package className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center gap-3 py-3 border-t border-gray-100">
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <Package className="w-4 h-4 text-orange-500" />
+            </div>
             <div>
-              <p className="text-sm text-gray-500">Article Type</p>
-              <p className="font-medium text-gray-900">{tracking.articleType}</p>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                Article Type
+              </p>
+              <p className="text-sm font-medium text-gray-900">
+                {tracking.articleType}
+              </p>
             </div>
           </div>
         )}
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-          {tracking.bookedOn && (
-            <div className="flex items-start gap-2">
-              <Calendar className="w-4 h-4 text-gray-400 mt-0.5" />
-              <div>
-                <p className="text-sm text-gray-500">Booked On</p>
-                <p className="font-medium text-gray-900">{tracking.bookedOn}</p>
+        {(tracking.bookedOn || tracking.deliveredOn) && (
+          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+            {tracking.bookedOn && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-100">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    Booked
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {tracking.bookedOn}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-          {tracking.deliveredOn && (
-            <div className="flex items-start gap-2">
-              <Calendar className="w-4 h-4 text-green-500 mt-0.5" />
-              <div>
-                <p className="text-sm text-gray-500">Delivered On</p>
-                <p className="font-medium text-green-600">{tracking.deliveredOn}</p>
+            )}
+            {tracking.deliveredOn && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    Delivered
+                  </p>
+                  <p className="text-sm font-medium text-emerald-600">
+                    {tracking.deliveredOn}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   )

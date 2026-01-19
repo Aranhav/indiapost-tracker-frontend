@@ -2,7 +2,7 @@
 
 import { TrackingEvent } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Circle, MapPin } from "lucide-react"
+import { MapPin } from "lucide-react"
 
 interface TrackingTimelineProps {
   events: TrackingEvent[]
@@ -12,7 +12,7 @@ interface TrackingTimelineProps {
 export function TrackingTimeline({ events, className }: TrackingTimelineProps) {
   if (!events || events.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">
+      <div className="text-center text-gray-400 py-8 text-sm">
         No tracking events available
       </div>
     )
@@ -26,60 +26,83 @@ export function TrackingTimeline({ events, className }: TrackingTimelineProps) {
           const isLast = index === events.length - 1
           const isDelivered = event.event?.toLowerCase().includes('delivered')
 
+          // Determine dot styling based on position and status
+          const getDotStyles = () => {
+            if (isFirst && isDelivered) {
+              return "bg-emerald-500 ring-4 ring-emerald-50"
+            }
+            if (isFirst) {
+              return "bg-orange-500 ring-4 ring-orange-50"
+            }
+            return "bg-gray-200"
+          }
+
+          // Determine line styling
+          const getLineStyles = () => {
+            if (isFirst && isDelivered) {
+              return "bg-emerald-200"
+            }
+            if (isFirst) {
+              return "bg-orange-200"
+            }
+            return "bg-gray-100"
+          }
+
           return (
             <div key={event.id || index} className="relative flex gap-4">
               {/* Timeline line and dot */}
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center w-4">
                 {/* Dot */}
                 <div
                   className={cn(
-                    "w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 z-10",
-                    isFirst
-                      ? isDelivered
-                        ? "bg-green-500 ring-4 ring-green-100"
-                        : "bg-primary-500 ring-4 ring-primary-100"
-                      : "bg-gray-300"
+                    "w-3 h-3 rounded-full flex-shrink-0 z-10 transition-all",
+                    getDotStyles()
                   )}
-                >
-                  {isFirst && isDelivered ? (
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  ) : isFirst ? (
-                    <Circle className="w-2 h-2 text-white fill-white" />
-                  ) : null}
-                </div>
+                />
                 {/* Line */}
                 {!isLast && (
                   <div
                     className={cn(
-                      "w-0.5 flex-1 min-h-[40px]",
-                      isFirst ? "bg-green-300" : "bg-gray-200"
+                      "w-px flex-1 min-h-[32px]",
+                      getLineStyles()
                     )}
                   />
                 )}
               </div>
 
               {/* Event content */}
-              <div className={cn("pb-6 flex-1", isLast && "pb-0")}>
+              <div className={cn("pb-5 flex-1 -mt-0.5", isLast && "pb-0")}>
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p
                       className={cn(
-                        "font-medium",
-                        isFirst ? "text-gray-900" : "text-gray-600"
+                        "text-sm leading-tight",
+                        isFirst
+                          ? "font-medium text-gray-900"
+                          : "text-gray-500"
                       )}
                     >
                       {event.event}
                     </p>
                     {(event.office || event.location) && (
-                      <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                        <MapPin className="w-3 h-3" />
-                        <span>{event.office || event.location}</span>
+                      <div className="flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                        <span className="text-xs text-gray-400 truncate">
+                          {event.office || event.location}
+                        </span>
                       </div>
                     )}
                   </div>
-                  <div className="text-right text-sm text-gray-500 flex-shrink-0">
-                    <p>{event.date}</p>
-                    {event.time && <p>{event.time}</p>}
+                  <div className="text-right flex-shrink-0">
+                    <p className={cn(
+                      "text-xs",
+                      isFirst ? "text-gray-600" : "text-gray-400"
+                    )}>
+                      {event.date}
+                    </p>
+                    {event.time && (
+                      <p className="text-xs text-gray-400">{event.time}</p>
+                    )}
                   </div>
                 </div>
               </div>

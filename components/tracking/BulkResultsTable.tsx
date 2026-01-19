@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, Fragment } from "react"
 import {
   Table,
   TableBody,
@@ -10,7 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { StatusBadge } from "./StatusBadge"
 import { TrackingTimeline } from "./TrackingTimeline"
 import { TrackingRecord } from "@/lib/types"
@@ -21,7 +20,9 @@ import {
   ChevronsUpDown,
   ChevronsDownUp,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  FileSpreadsheet,
+  FileText
 } from "lucide-react"
 import { exportToCSV, exportToExcel } from "@/lib/export-utils"
 
@@ -100,154 +101,182 @@ export function BulkResultsTable({ results }: BulkResultsTableProps) {
 
   return (
     <div ref={tableRef}>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-lg">
-              Results ({results.length} shipments)
-            </CardTitle>
-            <div className="flex gap-2 flex-wrap">
+      <Card className="border border-gray-100 shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <CardTitle className="text-base font-semibold text-gray-900">
+                Results
+              </CardTitle>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {results.length} shipment{results.length !== 1 ? 's' : ''} found
+                {selectedRows.size > 0 && (
+                  <span className="text-orange-600 ml-2">
+                    ({selectedRows.size} selected)
+                  </span>
+                )}
+                {someExpanded && (
+                  <span className="text-gray-400 ml-2">
+                    {expandedRows.size} expanded
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
               {/* Expand/Collapse buttons */}
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={allExpanded ? collapseAll : expandAll}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
                 {allExpanded ? (
                   <>
-                    <ChevronsDownUp className="w-4 h-4 mr-2" />
+                    <ChevronsDownUp className="w-3.5 h-3.5" />
                     Collapse All
                   </>
                 ) : (
                   <>
-                    <ChevronsUpDown className="w-4 h-4 mr-2" />
+                    <ChevronsUpDown className="w-3.5 h-3.5" />
                     Expand All
                   </>
                 )}
-              </Button>
+              </button>
+
+              <div className="w-px h-5 bg-gray-200 mx-1" />
 
               {/* Scroll buttons */}
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={scrollToTop}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <ArrowUp className="w-4 h-4 mr-2" />
+                <ArrowUp className="w-3.5 h-3.5" />
                 Top
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={scrollToBottom}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <ArrowDown className="w-4 h-4 mr-2" />
+                <ArrowDown className="w-3.5 h-3.5" />
                 Bottom
-              </Button>
+              </button>
+
+              <div className="w-px h-5 bg-gray-200 mx-1" />
 
               {/* Export buttons */}
-              <Button
-                variant="outline"
-                size="sm"
+              <button
                 onClick={() => handleExport('csv')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
               >
-                <Download className="w-4 h-4 mr-2" />
+                <FileText className="w-3.5 h-3.5" />
                 CSV
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button
                 onClick={() => handleExport('xlsx')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 hover:border-orange-300 transition-colors"
               >
-                <Download className="w-4 h-4 mr-2" />
+                <FileSpreadsheet className="w-3.5 h-3.5" />
                 Excel
-              </Button>
+              </button>
             </div>
           </div>
-          <div className="flex gap-4 text-sm text-gray-500">
-            {selectedRows.size > 0 && (
-              <span>{selectedRows.size} selected - export will include selected items only</span>
-            )}
-            {someExpanded && (
-              <span>{expandedRows.size} of {results.length} expanded</span>
-            )}
-          </div>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <input
-                    type="checkbox"
-                    checked={selectedRows.size === results.length}
-                    onChange={toggleAllSelection}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                </TableHead>
-                <TableHead>Tracking #</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Origin</TableHead>
-                <TableHead>Destination</TableHead>
-                <TableHead>Last Event</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {results.map((result) => {
-                const isExpanded = expandedRows.has(result.trackingNumber)
-                const isSelected = selectedRows.has(result.trackingNumber)
-                const lastEvent = result.events?.[0]
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50/50 border-b border-gray-100">
+                  <TableHead className="w-12 pl-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.size === results.length && results.length > 0}
+                      onChange={toggleAllSelection}
+                      className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0"
+                    />
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Tracking #
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Status
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Origin
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Destination
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Last Event
+                  </TableHead>
+                  <TableHead className="w-12 pr-4"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {results.map((result) => {
+                  const isExpanded = expandedRows.has(result.trackingNumber)
+                  const isSelected = selectedRows.has(result.trackingNumber)
+                  const lastEvent = result.events?.[0]
 
-                return (
-                  <>
-                    <TableRow
-                      key={result.trackingNumber}
-                      className="cursor-pointer"
-                      onClick={() => toggleRow(result.trackingNumber)}
-                    >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSelection(result.trackingNumber)}
-                          className="w-4 h-4 rounded border-gray-300"
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono font-medium">
-                        {result.trackingNumber}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={result.status || 'unknown'} />
-                      </TableCell>
-                      <TableCell>{result.origin || '-'}</TableCell>
-                      <TableCell>{result.destination || '-'}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {lastEvent?.event || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon">
-                          {isExpanded ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow key={`${result.trackingNumber}-expanded`}>
-                        <TableCell colSpan={7} className="bg-gray-50">
-                          <div className="p-4">
-                            <TrackingTimeline events={result.events || []} />
-                          </div>
+                  return (
+                    <Fragment key={result.trackingNumber}>
+                      <TableRow
+                        className={`cursor-pointer transition-colors border-b border-gray-50 ${
+                          isSelected
+                            ? 'bg-orange-50/50'
+                            : 'hover:bg-gray-50/50'
+                        } ${isExpanded ? 'bg-gray-50/30' : ''}`}
+                        onClick={() => toggleRow(result.trackingNumber)}
+                      >
+                        <TableCell className="pl-4" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelection(result.trackingNumber)}
+                            className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 focus:ring-offset-0"
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-sm font-medium text-gray-900">
+                          {result.trackingNumber}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={result.status || 'unknown'} />
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {result.origin || '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {result.destination || '-'}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] text-sm text-gray-500 truncate">
+                          {lastEvent?.event || '-'}
+                        </TableCell>
+                        <TableCell className="pr-4">
+                          <button className="p-1 rounded hover:bg-gray-100 transition-colors">
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            )}
+                          </button>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      {isExpanded && (
+                        <TableRow className="bg-gray-50/50">
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="px-6 py-4 border-l-2 border-orange-200 ml-4 my-2 bg-white rounded-r-lg">
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                Tracking History
+                              </p>
+                              <TrackingTimeline events={result.events || []} />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
